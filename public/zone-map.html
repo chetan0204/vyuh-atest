@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VYUHA · Zone Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0c10;--bg2:#0f1218;--surface:#141820;--border:rgba(255,255,255,.07);--gold:#c8a96e;--rose:#c97a7a;--sage:#7aab8a;--sky:#7aabc8;--text:#eee8dc;--muted:rgba(238,232,220,.45)}
+html,body{height:100%;font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text)}
+.topbar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:.9rem 2rem;z-index:1000;background:rgba(10,12,16,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.top-logo{font-size:1.1rem;font-weight:700;letter-spacing:.2em;color:var(--gold);text-decoration:none}
+.top-tag{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);padding:.22rem .7rem;border-radius:20px;background:rgba(200,169,110,.1);border:1px solid rgba(200,169,110,.2)}
+.back-btn{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:.32rem .8rem;border-radius:6px;border:1px solid var(--border);transition:all .25s}
+.back-btn:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.layout{display:flex;height:100vh;padding-top:57px}
+.sidebar{width:280px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.sidebar-head{padding:1.2rem;border-bottom:1px solid var(--border)}
+.sidebar-title{font-size:.9rem;font-weight:700;margin-bottom:1rem}
+.legend{display:flex;flex-direction:column;gap:.6rem;margin-bottom:1rem}
+.leg{display:flex;align-items:center;gap:.7rem;font-size:.78rem;color:var(--muted)}
+.leg-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.tools{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.8rem}
+.tool-btn{flex:1;min-width:110px;padding:.5rem .7rem;border-radius:7px;font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);transition:all .22s;font-family:'Space Grotesk',sans-serif}
+.tool-btn:hover,.tool-btn.active{background:var(--gold);color:#0a0c10;border-color:var(--gold)}
+.tool-btn.danger-tool:hover,.tool-btn.danger-tool.active{background:var(--rose);color:#fff;border-color:var(--rose)}
+.tool-btn.safe-tool:hover,.tool-btn.safe-tool.active{background:var(--sage);color:#fff;border-color:var(--sage)}
+.zone-list{flex:1;overflow-y:auto;padding:.8rem}
+.zone-item{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:.8rem 1rem;margin-bottom:.5rem;font-size:.78rem;display:flex;justify-content:space-between;align-items:center}
+.zone-item .zone-name{color:var(--text);font-weight:500}
+.zone-item .zone-type{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:.18rem .5rem;border-radius:10px}
+.type-danger{background:rgba(201,122,122,.15);color:var(--rose);border:1px solid rgba(201,122,122,.25)}
+.type-safe{background:rgba(122,171,138,.15);color:var(--sage);border:1px solid rgba(122,171,138,.25)}
+#map{flex:1}
+.map-hint{position:absolute;bottom:80px;left:300px;z-index:999;background:rgba(10,12,16,.85);backdrop-filter:blur(10px);padding:.7rem 1rem;border-radius:10px;border:1px solid var(--border);font-size:.75rem;color:var(--muted);display:none}
+.leaflet-popup-content-wrapper{background:#141820!important;color:var(--text)!important;border-radius:10px;border:1px solid var(--border)}
+.leaflet-popup-content{color:var(--text)!important;font-size:.82rem;line-height:1.6;font-family:'Space Grotesk',sans-serif}
+.leaflet-popup-tip{background:#141820!important}
+@media(max-width:700px){.sidebar{display:none}#map{flex:1}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="top-logo"  href="/">VYUHA</a>
+  <span class="top-tag">🗺 Zone Map</span>
+  <a class="back-btn"  href="/">← Back</a>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="sidebar-title">Zone Control Panel</div>
+      <div class="legend">
+        <div class="leg"><div class="leg-dot" style="background:#c97a7a"></div>Danger Zone</div>
+        <div class="leg"><div class="leg-dot" style="background:#7aab8a"></div>Safe Zone</div>
+        <div class="leg"><div class="leg-dot" style="background:#7aabc8"></div>Your Location</div>
+        <div class="leg"><div class="leg-dot" style="background:#f5c842"></div>SOS Signals</div>
+      </div>
+      <div class="tools">
+        <button class="tool-btn danger-tool" id="btnDanger" onclick="setMode('danger')">⚠ Mark Danger</button>
+        <button class="tool-btn safe-tool" id="btnSafe" onclick="setMode('safe')">🛡 Mark Safe</button>
+        <button class="tool-btn" onclick="setMode(null)">✕ Cancel</button>
+        <button class="tool-btn" onclick="locateUser()">📍 My Location</button>
+      </div>
+    </div>
+    <div class="zone-list" id="zoneList"><div style="padding:.5rem;font-size:.78rem;color:var(--muted)">Click the map to mark zones.</div></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+<script>
+let mode = null;
+let zoneCount = 0;
+const zones = [];
+
+const map = L.map('map').setView([20.5937, 78.9629], 5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+
+function makeIcon(type) {
+  const bg = type === 'danger' ? '#c97a7a' : type === 'safe' ? '#7aab8a' : '#7aabc8';
+  const sym = type === 'danger' ? '⚠' : type === 'safe' ? '🛡' : '📍';
+  return L.divIcon({ className: '', html: `<div style="width:34px;height:34px;background:${bg};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.3)">${sym}</div>`, iconSize: [34, 34] });
+}
+
+function setMode(m) {
+  mode = m;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  if (m === 'danger') document.getElementById('btnDanger').classList.add('active');
+  if (m === 'safe') document.getElementById('btnSafe').classList.add('active');
+  map.getContainer().style.cursor = m ? 'crosshair' : '';
+}
+
+map.on('click', e => {
+  if (!mode) return;
+  const { lat, lng } = e.latlng;
+  zoneCount++;
+  const name = `${mode === 'danger' ? 'Danger' : 'Safe'} Zone ${zoneCount}`;
+  L.circle([lat, lng], { radius: 500, color: mode === 'danger' ? '#c97a7a' : '#7aab8a', fillOpacity: .18, weight: 1.5 }).addTo(map)
+    .bindPopup(`<b>${mode === 'danger' ? '⚠' : '🛡'} ${name}</b><br>${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+  L.marker([lat, lng], { icon: makeIcon(mode) }).addTo(map);
+  zones.push({ name, type: mode, lat, lng });
+  const list = document.getElementById('zoneList');
+  if (list.children[0]?.style.color === 'var(--muted)') list.innerHTML = '';
+  list.innerHTML += `<div class="zone-item"><span class="zone-name">${name}</span><span class="zone-type ${mode === 'danger' ? 'type-danger' : 'type-safe'}">${mode}</span></div>`;
+});
+
+function locateUser() {
+  if (!navigator.geolocation) { alert('Geolocation not available'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    map.setView([lat, lng], 13);
+    L.marker([lat, lng], { icon: makeIcon('user') }).addTo(map).bindPopup('<b>📍 You are here</b>').openPopup();
+  }, err => alert('Location error: ' + err.message));
+}
+
+// Load SOS signals from live feed
+fetch('/api/disasters').then(r => r.json()).then(data => {
+  data.forEach(d => {
+    const color = { earthquake: '#f5c842', tsunami: '#7aabc8', 'severe weather': '#7aab8a' }[d.type] || '#fff';
+    L.circle([d.coordinates.lat, d.coordinates.lng], { radius: d.radius, color, fillOpacity: .08, weight: 1 }).addTo(map)
+      .bindPopup(`<b>${d.type.toUpperCase()}</b><br>${d.title}<br>Magnitude: ${d.magnitude?.toFixed?.(1) ?? d.magnitude}`);
+  });
+}).catch(() => {});
+
+locateUser();
+</script>
+</body>
+</html>

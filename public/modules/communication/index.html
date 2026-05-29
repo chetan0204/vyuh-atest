@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VYUHA · Communication</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#060810;--bg2:#0a0d18;--surface:rgba(255,255,255,.04);--border:rgba(180,127,255,.12);--accent:#b47fff;--green:#00e5a0;--red:#ff3b55;--text:#e8eeff;--muted:rgba(232,238,255,.45)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;display:flex;flex-direction:column}
+body::before{content:'';position:fixed;width:500px;height:500px;background:rgba(180,127,255,.06);border-radius:50%;filter:blur(100px);top:-100px;right:-100px;z-index:0;pointer-events:none}
+
+.topbar{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:1rem 2rem;z-index:100;background:rgba(6,8,16,.87);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
+.top-brand{font-size:1.1rem;font-weight:700;letter-spacing:.2em;color:#c8a96e;text-decoration:none}
+.top-tag{font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:.22rem .7rem;border-radius:20px;background:rgba(180,127,255,.1);border:1px solid rgba(180,127,255,.2)}
+.back-btn{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-decoration:none;padding:.32rem .8rem;border-radius:6px;border:1px solid var(--border);transition:all .25s}
+.back-btn:hover{color:var(--text);border-color:rgba(180,127,255,.3)}
+
+main{padding:88px 1rem 2rem;flex:1;display:flex;flex-direction:column;align-items:center;position:relative;z-index:1}
+h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;text-align:center;margin-bottom:.5rem;background:linear-gradient(135deg,#fff,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.subtitle{font-size:.88rem;color:var(--muted);text-align:center;margin-bottom:2rem}
+
+.chat-card{width:100%;max-width:680px;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;backdrop-filter:blur(12px)}
+.chat-hdr{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:1px solid var(--border);background:rgba(180,127,255,.04)}
+.chat-hdr-left{display:flex;align-items:center;gap:.7rem}
+.chat-indicator{width:8px;height:8px;border-radius:50%;background:var(--red);transition:background .3s}
+.chat-indicator.on{background:var(--green)}
+#peerStatus{font-size:.8rem;color:var(--muted);font-family:'DM Mono',monospace}
+.join-btn{padding:.5rem 1.2rem;border-radius:8px;background:var(--accent);border:none;color:#fff;font-size:.76rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:all .25s;font-family:'Space Grotesk',sans-serif}
+.join-btn:hover{background:#c890ff;transform:translateY(-1px)}
+.join-btn:disabled{opacity:.5;cursor:default;transform:none}
+
+.messages{min-height:340px;max-height:400px;overflow-y:auto;padding:1.1rem;display:flex;flex-direction:column;gap:.6rem}
+.msg{max-width:78%;padding:.65rem .95rem;border-radius:11px;font-size:.84rem;line-height:1.6}
+.msg.me{background:rgba(180,127,255,.16);border:1px solid rgba(180,127,255,.2);align-self:flex-end;color:var(--text)}
+.msg.peer{background:rgba(255,255,255,.05);border:1px solid var(--border);align-self:flex-start;color:var(--muted)}
+.msg.system{background:transparent;border:1px dashed rgba(255,255,255,.07);align-self:center;color:var(--muted);font-size:.7rem;font-family:'DM Mono',monospace;text-align:center;padding:.45rem .9rem}
+.msg.loc{background:rgba(0,229,160,.07);border:1px solid rgba(0,229,160,.18)}
+.msg.loc a{color:var(--green)}
+.placeholder{color:rgba(232,238,255,.18);font-size:.78rem;font-family:'DM Mono',monospace;text-align:center;margin:auto;padding:2rem}
+
+.input-row{display:flex;gap:.5rem;padding:.9rem 1.1rem;border-top:1px solid var(--border);background:rgba(0,0,0,.15)}
+.msg-input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:9px;padding:.6rem .9rem;color:var(--text);font-size:.84rem;font-family:'Space Grotesk',sans-serif;outline:none;transition:border-color .25s}
+.msg-input::placeholder{color:rgba(232,238,255,.22)}
+.msg-input:focus{border-color:rgba(180,127,255,.3)}
+.send-btn{padding:.6rem 1.1rem;border-radius:9px;background:var(--accent);border:none;color:#fff;font-size:.76rem;font-weight:600;cursor:pointer;transition:all .25s;flex-shrink:0;font-family:'Space Grotesk',sans-serif}
+.send-btn:hover{background:#c890ff}
+.loc-btn{padding:.6rem .9rem;border-radius:9px;background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);color:var(--green);font-size:.76rem;font-weight:600;cursor:pointer;transition:all .25s;flex-shrink:0;font-family:'Space Grotesk',sans-serif}
+.loc-btn:hover{background:rgba(0,229,160,.18)}
+
+.info-box{width:100%;max-width:680px;margin-top:.9rem;background:rgba(180,127,255,.05);border:1px solid rgba(180,127,255,.12);border-radius:11px;padding:.9rem 1.3rem;font-size:.78rem;color:var(--muted);line-height:1.7;display:flex;gap:.7rem}
+@media(max-width:500px){.input-row{flex-wrap:wrap}.msg-input{width:100%;order:1}.loc-btn,.send-btn{flex:1;order:2}.topbar{padding:.8rem 1rem}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="top-brand"  href="/">VYUHA</a>
+  <span class="top-tag">📡 Communication</span>
+  <a class="back-btn"  href="/">← Back</a>
+</header>
+
+<main>
+  <h1>Crisis Communication</h1>
+  <p class="subtitle">End-to-end encrypted P2P — works on 2G · No messages stored on server</p>
+
+  <div class="chat-card">
+    <div class="chat-hdr">
+      <div class="chat-hdr-left">
+        <div class="chat-indicator" id="chatDot"></div>
+        <span id="peerStatus">Click Join to connect with a peer</span>
+      </div>
+      <button class="join-btn" id="joinBtn" onclick="join()">Join Room</button>
+    </div>
+    <div class="messages" id="messages">
+      <div class="placeholder">No messages yet.<br>Join to connect with another user.</div>
+    </div>
+    <div class="input-row">
+      <input class="msg-input" id="msgInput" type="text" placeholder="Type message… (Enter to send)" maxlength="300"/>
+      <button class="loc-btn" id="locBtn" onclick="shareLocation()">📍</button>
+      <button class="send-btn" id="sendBtn" onclick="send()">Send</button>
+    </div>
+  </div>
+
+  <div class="info-box">
+    ℹ️ &nbsp; Messages go <strong>peer-to-peer</strong> directly between devices via WebRTC. The server only helps establish the connection. Works with poor internet — optimized for crisis conditions.
+  </div>
+</main>
+
+<script>
+(function () {
+  // Load socket.io from the same server
+  const s = document.createElement('script');
+  s.src = window.location.origin + '/socket.io/socket.io.js';
+  s.onload = init;
+  s.onerror = () => { setStatus('Server offline. Run: node server/server.js', false); };
+  document.head.appendChild(s);
+
+  let socket, pc, dc, peerId;
+  const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+  function init() {
+    socket = io(window.location.origin, { transports: ['websocket', 'polling'] });
+    socket.on('connect', () => setStatus('Connected to server · Waiting for peer', false));
+    socket.on('disconnect', () => setStatus('Disconnected from server', false));
+    socket.on('peer-ready', async id => {
+      peerId = id;
+      buildPC();
+      if (socket.id < id) {
+        dc = pc.createDataChannel('vyuha');
+        setupDC();
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('offer', { offer, to: id });
+      }
+    });
+    socket.on('offer', async ({ offer, from }) => {
+      peerId = from; buildPC();
+      await pc.setRemoteDescription(offer);
+      const ans = await pc.createAnswer();
+      await pc.setLocalDescription(ans);
+      socket.emit('answer', { answer: ans, to: from });
+    });
+    socket.on('answer', async ({ answer }) => { try { await pc.setRemoteDescription(answer); } catch {} });
+    socket.on('ice-candidate', async ({ candidate }) => { try { await pc.addIceCandidate(candidate); } catch {} });
+  }
+
+  function buildPC() {
+    pc = new RTCPeerConnection(ICE);
+    pc.onicecandidate = e => { if (e.candidate) socket.emit('ice-candidate', { candidate: e.candidate, to: peerId }); };
+    pc.ondatachannel = e => { dc = e.channel; setupDC(); };
+  }
+
+  function setupDC() {
+    dc.onopen = () => {
+      setStatus('Peer connected · P2P encrypted channel open', true);
+      document.getElementById('joinBtn').textContent = 'Connected';
+      addMsg('🔐 Secure P2P channel established.', 'system');
+    };
+    dc.onclose = () => { setStatus('Peer disconnected', false); addMsg('Peer disconnected.', 'system'); };
+    dc.onmessage = e => {
+      try {
+        const d = JSON.parse(e.data);
+        if (d.type === 'location') {
+          addMsg(`📍 Peer location: <a href="https://maps.google.com/?q=${d.lat},${d.lng}" target="_blank" rel="noopener">Open in Maps</a>`, 'peer loc');
+          return;
+        }
+      } catch {}
+      addMsg(esc(e.data), 'peer');
+    };
+  }
+
+  window.join = () => {
+    if (!socket) return;
+    document.getElementById('joinBtn').disabled = true;
+    document.getElementById('joinBtn').textContent = 'Searching…';
+    setStatus('Looking for a peer…', false);
+    addMsg('Joined emergency room — waiting for peer…', 'system');
+  };
+
+  window.send = () => {
+    const msg = document.getElementById('msgInput').value.trim();
+    if (!msg) return;
+    if (!dc || dc.readyState !== 'open') { addMsg('⚠ Not connected to a peer yet.', 'system'); return; }
+    dc.send(msg);
+    addMsg(esc(msg), 'me');
+    document.getElementById('msgInput').value = '';
+  };
+
+  window.shareLocation = () => {
+    if (!navigator.geolocation) { alert('Geolocation not available'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (!dc || dc.readyState !== 'open') { addMsg('⚠ Not connected to a peer yet.', 'system'); return; }
+      dc.send(JSON.stringify({ type: 'location', lat, lng }));
+      addMsg(`📍 You shared location: <a href="https://maps.google.com/?q=${lat},${lng}" target="_blank" rel="noopener">Open in Maps</a>`, 'me loc');
+    });
+  };
+
+  document.getElementById('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') window.send(); });
+
+  function addMsg(html, cls = 'peer') {
+    const msgs = document.getElementById('messages');
+    const p = msgs.querySelector('.placeholder');
+    if (p) p.remove();
+    const d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    d.innerHTML = html;
+    msgs.appendChild(d);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function setStatus(txt, connected) {
+    document.getElementById('peerStatus').textContent = txt;
+    document.getElementById('chatDot').classList.toggle('on', connected);
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+})();
+</script>
+</body>
+</html>

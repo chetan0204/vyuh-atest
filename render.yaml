@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: vyuha
+    env: node
+    buildCommand: npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: WEATHER_API_KEY
+        generateValue: false
+      - key: CLIENT_URL
+        generateValue: false
